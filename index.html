@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gerador de QR Code Pix</title>
+  <!-- Biblioteca qrcodejs via CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     * {
@@ -97,21 +98,22 @@
 <body>
 
   <div class="card">
-    <h2>Gerador de QR Code Pix</h2>
+    <h2>Cobrança Pix</h2>
     
-    <label for="chave">Chave Pix</label>
-    <input type="text" id="chave" placeholder="CPF, CNPJ, E-mail, Celular ou EVP">
+    <!-- Altere os atributos 'value' com os seus dados fixos -->
+    <label for="chave">+5598991589389</label>
+    <input type="text" id="chave" value="SUA_CHAVE_AQUI">
 
-    <label for="nome">Nome do Beneficiário</label>
-    <input type="text" id="nome" placeholder="Ex: Joao da Silva (sem acentos)">
+    <label for="nome">IGREJA</label>
+    <input type="text" id="nome" value="SEU NOME SEM ACENTO">
 
-    <label for="cidade">Cidade</label>
-    <input type="text" id="cidade" placeholder="Ex: Sao Paulo (sem acentos)">
+    <label for="cidade">SANTARITA</label>
+    <input type="text" id="cidade" value="SUA CIDADE">
 
     <label for="valor">Valor (Opcional)</label>
-    <input type="number" id="valor" step="0.01" placeholder="Ex: 15.50">
+    <input type="number" id="valor" step="0.01" placeholder="Ex: 15.50" value="">
 
-    <button onclick="gerarPix()">Gerar QR Code</button>
+    <button onclick="gerarPix()">Atualizar QR Code</button>
 
     <div id="qrcode"></div>
 
@@ -123,13 +125,11 @@
   </div>
 
   <script>
-    // Função para formatar os campos no padrão EMV (ID + Tamanho + Valor)
     function formatEMV(id, value) {
       const len = value.length.toString().padStart(2, '0');
       return `${id}${len}${value}`;
     }
 
-    // Cálculo do checksum CRC16 CCITT
     function crc16(payload) {
       let crc = 0xFFFF;
       for (let i = 0; i < payload.length; i++) {
@@ -146,49 +146,41 @@
       return crc.toString(16).toUpperCase().padStart(4, '0');
     }
 
-    // Processa a chave tratando telefones, CPFs e formatação geral
     function formatarChave(chave) {
       let clean = chave.trim();
       const apenasNumeros = clean.replace(/\D/g, '');
 
-      // Trata Telefone: se for formato nacional (10 ou 11 dígitos), insere +55
       if (apenasNumeros.length === 10 || apenasNumeros.length === 11) {
         return `+55${apenasNumeros}`;
-      } 
-      // Se digitou telefone com 55 no início (12 ou 13 dígitos)
-      else if (clean.startsWith('55') && (apenasNumeros.length === 12 || apenasNumeros.length === 13)) {
+      } else if (clean.startsWith('55') && (apenasNumeros.length === 12 || apenasNumeros.length === 13)) {
         return `+${apenasNumeros}`;
-      }
-      // Se for CPF (11 dígitos não precedidos de DDD) ou CNPJ (14 dígitos)
-      else if (apenasNumeros.length === 14) {
+      } else if (apenasNumeros.length === 14) {
         return apenasNumeros;
       }
       
       return clean;
     }
 
-    // Monta a string de payload no padrão BR Code do Banco Central
     function gerarPayloadPix(chave, nome, cidade, valor) {
       const cleanChave = formatarChave(chave);
       const cleanNome = nome.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").substring(0, 25);
       const cleanCidade = cidade.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").substring(0, 15);
 
-      // Merchant Account Information (GUI + Chave)
       const gui = formatEMV('00', 'br.gov.bcb.pix');
       const key = formatEMV('01', cleanChave);
       const merchantAccount = formatEMV('26', gui + key);
 
       let payload = 
-        formatEMV('00', '01') +                          // Payload Format Indicator
-        merchantAccount +                                 // Merchant Account Info
-        formatEMV('52', '0000') +                        // Merchant Category Code
-        formatEMV('53', '986') +                         // Transaction Currency (BRL)
-        (valor ? formatEMV('54', parseFloat(valor).toFixed(2)) : '') + // Transaction Amount
-        formatEMV('58', 'BR') +                          // Country Code
-        formatEMV('59', cleanNome) +                     // Merchant Name
-        formatEMV('60', cleanCidade) +                   // Merchant City
-        formatEMV('62', formatEMV('05', '***')) +        // Additional Data Field (TXID)
-        '6304';                                          // CRC16 Indicator
+        formatEMV('00', '01') +
+        merchantAccount +
+        formatEMV('52', '0000') +
+        formatEMV('53', '986') +
+        (valor ? formatEMV('54', parseFloat(valor).toFixed(2)) : '') +
+        formatEMV('58', 'BR') +
+        formatEMV('59', cleanNome) +
+        formatEMV('60', cleanCidade) +
+        formatEMV('62', formatEMV('05', '***')) +
+        '6304';
 
       payload += crc16(payload);
       return payload;
@@ -212,7 +204,6 @@
 
       const payloadPix = gerarPayloadPix(chave, nome, cidade, valor);
 
-      // Desenha o QR Code
       new QRCode(container, {
         text: payloadPix,
         width: 200,
@@ -220,7 +211,6 @@
         correctLevel: QRCode.CorrectLevel.M
       });
 
-      // Exibe o campo de Pix Copia e Cola
       copiaColaInput.value = payloadPix;
       copiaColaContainer.style.display = 'flex';
     }
@@ -231,6 +221,11 @@
       navigator.clipboard.writeText(copiaColaInput.value);
       alert('Código Pix Copia e Cola copiado com sucesso!');
     }
+
+    // Executa a geração assim que a página carrega os dados fixos
+    window.onload = function() {
+      gerarPix();
+    };
   </script>
 
 </body>
