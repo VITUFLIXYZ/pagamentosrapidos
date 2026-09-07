@@ -30,6 +30,19 @@
       flex-direction: column;
       gap: 12px;
     }
+
+    /* Estilo atualizado dos Créditos */
+    .credits {
+      margin: 0 0 -4px 0;
+      text-align: center;
+      font-size: 11px;
+      font-family: "Georgia", "Times New Roman", serif; /* Fonte elegante / serifada */
+      font-style: italic;
+      color: #333333;
+      opacity: 0.45; /* Efeito de transparência */
+      letter-spacing: 0.5px;
+    }
+
     h2 {
       margin: 0 0 10px 0;
       text-align: center;
@@ -73,13 +86,11 @@
       align-items: center;
       margin-top: 15px;
       min-height: 220px;
-      background-color: #ffffff; /* Fundo branco para garantir o contraste */
-      padding: 15px;             /* Borda de respiro (Quiet Zone) */
+      background-color: #ffffff;
+      padding: 15px;
       border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); /* Opcional: destaca o QR Code do fundo */
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
-    
-    /* Garante que a imagem do QR Code fique bem centralizada */
     #qrcode img {
       display: block;
       margin: 0 auto;
@@ -108,7 +119,9 @@
 <body>
 
   <div class="card">
-    <h2>Cobrança Pix</h2>
+    <!-- Créditos no topo com transparência e fonte Serif/Itálica -->
+    <p class="credits">by: Sérgio Victor</p>
+    <h2>FESTEJO DE SANTA RITA DE CÁSSIA</h2>
     
     <label for="chave">Chave Pix</label>
     <input type="text" id="chave" value="SUA_CHAVE_AQUI">
@@ -127,7 +140,6 @@
     <div id="qrcode"></div>
 
     <div id="copia-cola-container">
-      <!-- O texto fica escondido neste input invisível apenas para a função de cópia -->
       <input type="text" id="copia-cola-input" style="position: absolute; left: -9999px;" readonly>
       <button class="btn-copy" onclick="copiarPix()">Copiar Código Pix</button>
     </div>
