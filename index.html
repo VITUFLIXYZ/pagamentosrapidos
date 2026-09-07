@@ -1,232 +1,117 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gerador de QR Code Pix</title>
-  <!-- Biblioteca qrcodejs via CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <style>
-    * {
-      box-sizing: border-box;
-      font-family: Arial, sans-serif;
+<script>
+  function formatEMV(id, value) {
+    var len = value.length.toString();
+    if (len.length < 2) {
+      len = '0' + len;
     }
-    body {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-      background-color: #f4f4f9;
-      padding: 20px;
-    }
-    .card {
-      background: #ffffff;
-      padding: 24px;
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-      width: 100%;
-      max-width: 360px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    h2 {
-      margin: 0 0 10px 0;
-      text-align: center;
-      color: #333333;
-    }
-    label {
-      font-size: 12px;
-      font-weight: bold;
-      color: #555;
-      margin-bottom: -8px;
-    }
-    input {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 14px;
-      outline: none;
-    }
-    input:focus {
-      border-color: #00875a;
-    }
-    button {
-      padding: 12px;
-      background: #00875a;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 15px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s;
-      margin-top: 5px;
-    }
-    button:hover {
-      background: #006644;
-    }
-    #qrcode {
-      display: flex;
-      justify-content: center;
-      margin-top: 15px;
-      min-height: 200px;
-    }
-    #copia-cola-container {
-      display: none;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: 10px;
-    }
-    #copia-cola-input {
-      font-size: 11px;
-      background: #f0f0f0;
-      color: #666;
-    }
-    .btn-copy {
-      background: #333;
-      padding: 8px;
-      font-size: 13px;
-    }
-    .btn-copy:hover {
-      background: #555;
-    }
-  </style>
-</head>
-<body>
+    return id + len + value;
+  }
 
-  <div class="card">
-    <h2>Cobrança Pix</h2>
-    
-    <!-- Altere os atributos 'value' com os seus dados fixos -->
-    <label for="chave">Chave Pix</label>
-    <input type="text" id="chave" value="SUA_CHAVE_AQUI">
-
-    <label for="nome">Nome do Beneficiário</label>
-    <input type="text" id="nome" value="SEU NOME SEM ACENTO">
-
-    <label for="cidade">Cidade</label>
-    <input type="text" id="cidade" value="SUA CIDADE">
-
-    <label for="valor">Valor (Opcional)</label>
-    <input type="number" id="valor" step="0.01" placeholder="Ex: 15.50" value="">
-
-    <button onclick="gerarPix()">Atualizar QR Code</button>
-
-    <div id="qrcode"></div>
-
-    <div id="copia-cola-container">
-      <label>Pix Copia e Cola:</label>
-      <input type="text" id="copia-cola-input" readonly>
-      <button class="btn-copy" onclick="copiarPix()">Copiar Código Pix</button>
-    </div>
-  </div>
-
-  <script>
-    function formatEMV(id, value) {
-      const len = value.length.toString().padStart(2, '0');
-      return `${id}${len}${value}`;
-    }
-
-    function crc16(payload) {
-      let crc = 0xFFFF;
-      for (let i = 0; i < payload.length; i++) {
-        crc ^= payload.charCodeAt(i) << 8;
-        for (let j = 0; j < 8; j++) {
-          if ((crc & 0x8000) !== 0) {
-            crc = (crc << 1) ^ 0x1021;
-          } else {
-            crc <<= 1;
-          }
-          crc &= 0xFFFF;
+  function crc16(payload) {
+    var crc = 0xFFFF;
+    for (var i = 0; i < payload.length; i++) {
+      crc ^= payload.charCodeAt(i) << 8;
+      for (var j = 0; j < 8; j++) {
+        if ((crc & 0x8000) !== 0) {
+          crc = (crc << 1) ^ 0x1021;
+        } else {
+          crc <<= 1;
         }
+        crc &= 0xFFFF;
       }
-      return crc.toString(16).toUpperCase().padStart(4, '0');
+    }
+    var hex = crc.toString(16).toUpperCase();
+    while (hex.length < 4) {
+      hex = '0' + hex;
+    }
+    return hex;
+  }
+
+  function formatarChave(chave) {
+    var clean = chave.trim();
+    var apenasNumeros = clean.replace(/\D/g, '');
+
+    if (apenasNumeros.length === 10 || apenasNumeros.length === 11) {
+      return '+55' + apenasNumeros;
+    } else if (clean.indexOf('55') === 0 && (apenasNumeros.length === 12 || apenasNumeros.length === 13)) {
+      return '+' + apenasNumeros;
+    } else if (apenasNumeros.length === 14) {
+      return apenasNumeros;
+    }
+    
+    return clean;
+  }
+
+  function gerarPayloadPix(chave, nome, cidade, valor) {
+    var cleanChave = formatarChave(chave);
+    
+    // Tratamento de acentos compatível com navegadores antigos
+    var cleanNome = nome.trim().replace(/[áàãâä]/gi, "a").replace(/[éèêë]/gi, "e").replace(/[íìîï]/gi, "i").replace(/[óòõôö]/gi, "o").replace(/[úùûü]/gi, "u").replace(/[ç]/gi, "c").substring(0, 25);
+    var cleanCidade = cidade.trim().replace(/[áàãâä]/gi, "a").replace(/[éèêë]/gi, "e").replace(/[íìîï]/gi, "i").replace(/[óòõôö]/gi, "o").replace(/[úùûü]/gi, "u").replace(/[ç]/gi, "c").substring(0, 15);
+
+    var gui = formatEMV('00', 'br.gov.bcb.pix');
+    var key = formatEMV('01', cleanChave);
+    var merchantAccount = formatEMV('26', gui + key);
+
+    var payload = 
+      formatEMV('00', '01') +
+      merchantAccount +
+      formatEMV('52', '0000') +
+      formatEMV('53', '986') +
+      (valor ? formatEMV('54', parseFloat(valor).toFixed(2)) : '') +
+      formatEMV('58', 'BR') +
+      formatEMV('59', cleanNome) +
+      formatEMV('60', cleanCidade) +
+      formatEMV('62', formatEMV('05', '***')) +
+      '6304';
+
+    payload += crc16(payload);
+    return payload;
+  }
+
+  function gerarPix() {
+    var chave = document.getElementById('chave').value;
+    var nome = document.getElementById('nome').value;
+    var cidade = document.getElementById('cidade').value;
+    var valor = document.getElementById('valor').value;
+    var container = document.getElementById('qrcode');
+    var copiaColaInput = document.getElementById('copia-cola-input');
+    var copiaColaContainer = document.getElementById('copia-cola-container');
+
+    container.innerHTML = '';
+
+    if (!chave || !nome || !cidade) {
+      alert('Por favor, preencha a Chave Pix, o Nome e a Cidade.');
+      return;
     }
 
-    function formatarChave(chave) {
-      let clean = chave.trim();
-      const apenasNumeros = clean.replace(/\D/g, '');
+    var payloadPix = gerarPayloadPix(chave, nome, cidade, valor);
 
-      if (apenasNumeros.length === 10 || apenasNumeros.length === 11) {
-        return `+55${apenasNumeros}`;
-      } else if (clean.startsWith('55') && (apenasNumeros.length === 12 || apenasNumeros.length === 13)) {
-        return `+${apenasNumeros}`;
-      } else if (apenasNumeros.length === 14) {
-        return apenasNumeros;
-      }
-      
-      return clean;
-    }
+    new QRCode(container, {
+      text: payloadPix,
+      width: 200,
+      height: 200,
+      correctLevel: QRCode.CorrectLevel.M
+    });
 
-    function gerarPayloadPix(chave, nome, cidade, valor) {
-      const cleanChave = formatarChave(chave);
-      const cleanNome = nome.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").substring(0, 25);
-      const cleanCidade = cidade.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").substring(0, 15);
+    copiaColaInput.value = payloadPix;
+    copiaColaContainer.style.display = 'flex';
+  }
 
-      const gui = formatEMV('00', 'br.gov.bcb.pix');
-      const key = formatEMV('01', cleanChave);
-      const merchantAccount = formatEMV('26', gui + key);
-
-      let payload = 
-        formatEMV('00', '01') +
-        merchantAccount +
-        formatEMV('52', '0000') +
-        formatEMV('53', '986') +
-        (valor ? formatEMV('54', parseFloat(valor).toFixed(2)) : '') +
-        formatEMV('58', 'BR') +
-        formatEMV('59', cleanNome) +
-        formatEMV('60', cleanCidade) +
-        formatEMV('62', formatEMV('05', '***')) +
-        '6304';
-
-      payload += crc16(payload);
-      return payload;
-    }
-
-    function gerarPix() {
-      const chave = document.getElementById('chave').value;
-      const nome = document.getElementById('nome').value;
-      const cidade = document.getElementById('cidade').value;
-      const valor = document.getElementById('valor').value;
-      const container = document.getElementById('qrcode');
-      const copiaColaInput = document.getElementById('copia-cola-input');
-      const copiaColaContainer = document.getElementById('copia-cola-container');
-
-      container.innerHTML = '';
-
-      if (!chave || !nome || !cidade) {
-        alert('Por favor, preencha a Chave Pix, o Nome e a Cidade.');
-        return;
-      }
-
-      const payloadPix = gerarPayloadPix(chave, nome, cidade, valor);
-
-      new QRCode(container, {
-        text: payloadPix,
-        width: 200,
-        height: 200,
-        correctLevel: QRCode.CorrectLevel.M
-      });
-
-      copiaColaInput.value = payloadPix;
-      copiaColaContainer.style.display = 'flex';
-    }
-
-    function copiarPix() {
-      const copiaColaInput = document.getElementById('copia-cola-input');
-      copiaColaInput.select();
-      navigator.clipboard.writeText(copiaColaInput.value);
+  function copiarPix() {
+    var copiaColaInput = document.getElementById('copia-cola-input');
+    copiaColaInput.select();
+    
+    // Método de cópia legado compatível com iOS 9
+    try {
+      document.execCommand('copy');
       alert('Código Pix Copia e Cola copiado com sucesso!');
+    } catch (err) {
+      alert('Selecione o texto e copie manualmente.');
     }
+  }
 
-    // Executa a geração assim que a página carrega os dados fixos
-    window.onload = function() {
-      gerarPix();
-    };
-  </script>
-
-</body>
-</html>
+  window.onload = function() {
+    gerarPix();
+  };
+</script>
