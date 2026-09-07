@@ -127,8 +127,8 @@
     <div id="qrcode"></div>
 
     <div id="copia-cola-container">
-      <label>Pix Copia e Cola:</label>
-      <input type="text" id="copia-cola-input" readonly>
+      <!-- O texto fica escondido neste input invisível apenas para a função de cópia -->
+      <input type="text" id="copia-cola-input" style="position: absolute; left: -9999px;" readonly>
       <button class="btn-copy" onclick="copiarPix()">Copiar Código Pix</button>
     </div>
   </div>
@@ -237,9 +237,9 @@
       
       try {
         document.execCommand('copy');
-        alert('Código Pix Copia e Cola copiado com sucesso!');
+        alert('Código Pix copiado com sucesso!');
       } catch (err) {
-        alert('Selecione o texto e copie manualmente.');
+        alert('Erro ao copiar automaticamente.');
       }
     }
 
